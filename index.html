@@ -312,24 +312,106 @@
             }
         }
 
-        // Thêm ứng viên mới (Chỉ có ở trang Admin)
-        async function addCandidate() {
+        // Tải danh sách ứng viên cho bảng Quản trị
+        async function loadAdminCandidates() {
+            const tableBody = document.getElementById('admin-candidates-table');
+            tableBody.innerHTML = '<tr><td colspan="3" class="px-4 py-3 text-center text-sm text-gray-500">Đang tải dữ liệu...</td></tr>';
+
+            try {
+                const snapshot = await db.collection('candidates').get();
+                if (snapshot.empty) {
+                    tableBody.innerHTML = '<tr><td colspan="3" class="px-4 py-3 text-center text-sm text-gray-500">Chưa có ứng viên nào.</td></tr>';
+                    return;
+                }
+
+                let html = '';
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const id = doc.id;
+                    // Sử dụng encodeURIComponent để mã hóa tên và tiểu sử tránh lỗi dấu ngoặc kép trong HTML inline (onclick)
+                    html += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 font-medium text-gray-900">${data.name}</td>
+                            <td class="px-4 py-3 whitespace-pre-wrap">${data.bio}</td>
+                            <td class="px-4 py-3 text-center space-x-2">
+                                <button type="button" onclick="editCandidate('${id}', '${encodeURIComponent(data.name)}', '${encodeURIComponent(data.bio)}')" class="text-blue-600 hover:underline font-semibold">Sửa</button>
+                                <button type="button" onclick="deleteCandidate('${id}', '${encodeURIComponent(data.name)}')" class="text-red-600 hover:underline font-semibold">Xóa</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tableBody.innerHTML = html;
+            } catch (error) {
+                tableBody.innerHTML = '<tr><td colspan="3" class="px-4 py-3 text-center text-red-500">Lỗi tải dữ liệu.</td></tr>';
+                console.error("Lỗi load ứng viên admin: ", error);
+            }
+        }
+
+        // Thêm hoặc Cập nhật ứng viên (Chỉ có ở trang Admin)
+        async function saveCandidate() {
+            const id = document.getElementById('edit-candidate-id').value;
             const name = document.getElementById('candidate-name').value.trim();
             const bio = document.getElementById('candidate-bio').value.trim();
 
             if (!name || !bio) return alert("Vui lòng nhập đầy đủ Tên và Thành tích!");
 
             try {
-                await db.collection('candidates').add({
-                    name: name,
-                    bio: bio,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                alert("Thêm ứng viên thành công!");
-                document.getElementById('candidate-name').value = '';
-                document.getElementById('candidate-bio').value = '';
+                if (id) {
+                    // Chế độ Sửa
+                    await db.collection('candidates').doc(id).update({
+                        name: name,
+                        bio: bio
+                    });
+                    alert("Cập nhật ứng viên thành công!");
+                } else {
+                    // Chế độ Thêm mới
+                    await db.collection('candidates').add({
+                        name: name,
+                        bio: bio,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    alert("Thêm ứng viên thành công!");
+                }
+                cancelEdit();
+                loadAdminCandidates();
             } catch (error) {
-                alert("Lỗi khi thêm ứng viên: " + error.message);
+                alert("Lỗi khi lưu ứng viên: " + error.message);
+            }
+        }
+
+        function editCandidate(id, encodedName, encodedBio) {
+            document.getElementById('edit-candidate-id').value = id;
+            document.getElementById('candidate-name').value = decodeURIComponent(encodedName);
+            document.getElementById('candidate-bio').value = decodeURIComponent(encodedBio);
+            
+            document.getElementById('form-title').innerText = 'Sửa Thông Tin Ứng Viên';
+            document.getElementById('save-candidate-btn').innerText = 'Cập Nhật';
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+            
+            // Tự động cuộn trang lên form
+            document.getElementById('add-candidate-form').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            document.getElementById('edit-candidate-id').value = '';
+            document.getElementById('candidate-name').value = '';
+            document.getElementById('candidate-bio').value = '';
+            
+            document.getElementById('form-title').innerText = 'Thêm Ứng Viên Mới';
+            document.getElementById('save-candidate-btn').innerText = 'Lưu Ứng Viên';
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
+        }
+
+        async function deleteCandidate(id, encodedName) {
+            const name = decodeURIComponent(encodedName);
+            if (!confirm(`Bạn có chắc chắn muốn xóa ứng viên "${name}" không? Thao tác này không thể hoàn tác.`)) return;
+
+            try {
+                await db.collection('candidates').doc(id).delete();
+                alert("Xóa ứng viên thành công!");
+                loadAdminCandidates();
+            } catch (error) {
+                alert("Lỗi khi xóa ứng viên: " + error.message);
             }
         }
 
