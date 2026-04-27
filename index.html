@@ -16,8 +16,8 @@
 </head>
 <body class="flex items-center justify-center min-h-screen">
 
-    <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl">
-        <div class="text-center">
+    <div class="w-full max-w-3xl p-6 md:p-8 space-y-6 bg-white rounded-2xl shadow-xl m-4">
+        <div class="text-center border-b pb-4">
             <h1 class="text-3xl font-bold text-gray-800 mb-2">CLB G14</h1>
             <p class="text-sm text-gray-500">Hệ thống Bầu cử Chủ tịch Nhiệm kỳ mới</p>
             <p class="text-xs text-red-500 font-semibold mt-1">Hạn chót: 16h00 ngày 27/06/2026</p>
@@ -31,27 +31,91 @@
             </button>
         </div>
 
-        <div id="voting-section" class="hidden space-y-4">
-            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <p class="text-sm text-blue-800">Xin chào, <span id="user-email" class="font-bold"></span></p>
+        <!-- GIAO DIỆN ADMIN (CHỈ ADMIN THẤY) -->
+        <div id="admin-section" class="hidden space-y-4">
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-100 flex justify-between items-center">
+                <p class="text-sm text-purple-800">Trang Quản Trị: <span id="admin-email" class="font-bold"></span></p>
+                <button onclick="auth.signOut()" class="text-xs text-red-600 hover:underline font-bold">Đăng xuất</button>
             </div>
             
+            <form id="add-candidate-form" class="space-y-4 border p-5 rounded-lg bg-gray-50 shadow-inner">
+                <h3 class="font-bold text-gray-800">Thêm Ứng Viên Mới</h3>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Tên ứng viên</label>
+                    <input type="text" id="candidate-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-[#f26d21] focus:border-[#f26d21]" placeholder="Ví dụ: Nguyễn Văn A" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Thành tích / Giới thiệu</label>
+                    <textarea id="candidate-bio" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-[#f26d21] focus:border-[#f26d21]" placeholder="Nhập thành tích nổi bật..." required></textarea>
+                </div>
+                <button type="button" onclick="addCandidate()" class="w-full py-2 text-white font-bold rounded-lg shadow bg-purple-600 hover:bg-purple-700 transition">
+                    Lưu Ứng Viên
+                </button>
+            </form>
+
+            <!-- THỐNG KÊ KẾT QUẢ CHO ADMIN -->
+            <div class="mt-8 pt-6 border-t border-gray-200 space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-gray-800 text-lg">Thống Kê Kết Quả</h3>
+                    <button onclick="loadAdminResults()" class="text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 font-semibold transition">🔄 Làm mới</button>
+                </div>
+                
+                <!-- Các thẻ thống kê số phiếu -->
+                <div id="admin-summary-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+                <!-- Bảng chi tiết người vote -->
+                <div class="overflow-x-auto border rounded-lg shadow-sm mt-4">
+                    <table class="min-w-full text-sm text-left text-gray-600">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                            <tr><th class="px-4 py-3">Cử tri (Email)</th><th class="px-4 py-3">Bầu cho</th><th class="px-4 py-3">Thời gian</th></tr>
+                        </thead>
+                        <tbody id="admin-detailed-table" class="divide-y"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- GIAO DIỆN CỬ TRI -->
+        <div id="voting-section" class="hidden space-y-4">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 flex justify-between items-center">
+                <p class="text-sm text-blue-800">Xin chào, <span id="user-email" class="font-bold"></span></p>
+                <button onclick="auth.signOut()" class="text-xs text-red-600 hover:underline font-bold">Đăng xuất</button>
+            </div>
+
+            <!-- THÔNG BÁO LUẬT CHƠI (BỰA NHƯNG CHUYÊN NGHIỆP) -->
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg shadow-sm text-sm text-yellow-800">
+                <p class="font-bold flex items-center mb-1">
+                    <span class="text-lg mr-2">📢</span> Luật chơi rất "chill":
+                </p>
+                <p>
+                    Bạn có toàn quyền "quay xe" và đổi phiếu liên tục cho đến trước <strong>16h00 ngày 27/06/2026</strong>. Sau giờ G, hệ thống sẽ <em>chốt sổ một cách máu lạnh</em> 🥶. Hãy dùng 200% sự sáng suốt để chọn ra vị Thuyền trưởng chèo lái tương lai G14 nhé! 🚢🔥
+                </p>
+            </div>
+            
+            <!-- HIỂN THỊ PHIẾU BẦU HIỆN TẠI -->
+            <div id="current-vote-banner" class="hidden p-4 bg-green-50 border border-green-200 rounded-lg flex items-center shadow-sm">
+                <div class="bg-green-100 p-2 rounded-full mr-4">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <div>
+                    <p class="text-xs text-green-700 font-semibold uppercase tracking-wider">Phiếu bầu hiện hành của bạn</p>
+                    <p id="current-voted-candidate" class="text-lg font-bold text-green-900 mt-0.5"></p>
+                </div>
+            </div>
+
             <form id="vote-form" class="space-y-4">
                 <h3 class="font-semibold text-gray-700">Danh sách Ứng viên:</h3>
                 
-                <label class="flex items-center p-4 border rounded-xl cursor-pointer hover:border-[#f26d21] hover:bg-orange-50 transition">
-                    <input type="radio" name="candidate" value="Ứng viên A" class="w-5 h-5 text-[#f26d21] border-gray-300 focus:ring-[#f26d21]">
-                    <span class="ml-3 text-gray-800 font-medium">Nguyễn Văn A (Ứng viên 1)</span>
-                </label>
-
-                <label class="flex items-center p-4 border rounded-xl cursor-pointer hover:border-[#f26d21] hover:bg-orange-50 transition">
-                    <input type="radio" name="candidate" value="Ứng viên B" class="w-5 h-5 text-[#f26d21] border-gray-300 focus:ring-[#f26d21]">
-                    <span class="ml-3 text-gray-800 font-medium">Trần Thị B (Ứng viên 2)</span>
-                </label>
+                <div id="candidates-list" class="space-y-3">
+                    <!-- Danh sách tải động từ Firebase -->
+                </div>
 
                 <button type="button" onclick="submitVote()" class="w-full py-3 mt-4 text-white font-bold rounded-lg shadow-lg gradient-bg hover:opacity-90 transition">
                     Bỏ Phiếu Kín
                 </button>
+                <div class="text-center">
+                    <p id="last-vote-status" class="text-xs text-gray-500 mt-2"></p>
+                </div>
             </form>
         </div>
     </div>
@@ -82,57 +146,227 @@
         // Theo dõi trạng thái đăng nhập
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                const email = user.email;
+                const email = user.email.toLowerCase().trim();
+                console.log("Đăng nhập thành công, đang kiểm tra quyền của:", email);
                 
-                // Kiểm tra danh sách trắng
-                const docRef = db.collection('allowed_voters').doc(email);
-                const docSnap = await docRef.get();
+                try {
+                    // 1. Kiểm tra xem có phải Admin không (dựa vào collection 'admins')
+                    const adminRef = db.collection('admins').doc(email);
+                    const adminSnap = await adminRef.get();
 
-                if (docSnap.exists) {
-                    // Nếu hợp lệ, hiển thị form
-                    document.getElementById('login-section').classList.add('hidden');
-                    document.getElementById('voting-section').classList.remove('hidden');
-                    document.getElementById('user-email').innerText = email;
-                } else {
-                    // Nếu không hợp lệ
-                    alert(`Tài khoản ${email} không có trong danh sách cử tri. Vui lòng liên hệ Admin.`);
+                    if (adminSnap.exists) {
+                        console.log("Chế độ Admin được kích hoạt.");
+                        // Hiển thị trang Admin
+                        document.getElementById('login-section').classList.add('hidden');
+                        document.getElementById('voting-section').classList.add('hidden');
+                        document.getElementById('admin-section').classList.remove('hidden');
+                        document.getElementById('admin-email').innerText = email;
+                        // Tải dữ liệu kết quả cho admin
+                        loadAdminResults();
+                        return; // Dừng lại ở đây, không kiểm tra quyền cử tri nữa
+                    }
+
+                    // 2. Nếu không phải Admin, kiểm tra xem có phải cử tri hợp lệ không
+                    const voterRef = db.collection('allowed_voters').doc(email);
+                    const voterSnap = await voterRef.get();
+
+                    if (voterSnap.exists) {
+                        console.log("Chế độ Cử tri được kích hoạt.");
+                        // Nếu hợp lệ, hiển thị form bỏ phiếu
+                        document.getElementById('login-section').classList.add('hidden');
+                        document.getElementById('admin-section').classList.add('hidden');
+                        document.getElementById('voting-section').classList.remove('hidden');
+                        document.getElementById('user-email').innerText = email;
+                        
+                        // Tải danh sách ứng viên và phiếu bầu đã có
+                        await loadCandidates();
+                        await loadUserVote();
+                    } else {
+                        alert(`Tài khoản ${email} không có trong danh sách cử tri. Vui lòng liên hệ Admin.`);
+                        auth.signOut();
+                    }
+                } catch (error) {
+                    console.error("Lỗi truy vấn Firestore:", error);
+                    alert("Lỗi khi kiểm tra dữ liệu: " + error.message + "\n(Vui lòng cấp quyền Security Rules trên Firestore)");
                     auth.signOut();
                 }
             } else {
                 document.getElementById('login-section').classList.remove('hidden');
                 document.getElementById('voting-section').classList.add('hidden');
+                document.getElementById('admin-section').classList.add('hidden');
             }
         });
+
+        // Tải danh sách ứng viên từ Firestore
+        async function loadCandidates() {
+            const listContainer = document.getElementById('candidates-list');
+            listContainer.innerHTML = '<p class="text-sm text-gray-500">Đang tải danh sách ứng viên...</p>';
+
+            try {
+                const snapshot = await db.collection('candidates').get();
+                if (snapshot.empty) {
+                    listContainer.innerHTML = '<p class="text-sm text-red-500">Ban tổ chức chưa thêm ứng viên nào.</p>';
+                    return;
+                }
+
+                let html = '';
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    html += `
+                        <label class="flex flex-col p-4 border rounded-xl cursor-pointer hover:border-[#f26d21] hover:bg-orange-50 transition">
+                            <div class="flex items-center">
+                                <input type="radio" name="candidate" value="${data.name}" class="w-5 h-5 text-[#f26d21] border-gray-300 focus:ring-[#f26d21]">
+                                <span class="ml-3 text-gray-800 font-bold">${data.name}</span>
+                            </div>
+                            <div class="ml-8 mt-2 text-sm text-gray-600">
+                                <strong>Thành tích:</strong> <br/> ${data.bio.replace(/\n/g, '<br>')}
+                            </div>
+                        </label>
+                    `;
+                });
+                listContainer.innerHTML = html;
+            } catch (error) {
+                listContainer.innerHTML = '<p class="text-sm text-red-500">Lỗi khi tải dữ liệu.</p>';
+                console.error("Lỗi load ứng viên: ", error);
+            }
+        }
+
+        // Tải phiếu bầu đã có của người dùng để hiển thị lại lựa chọn cũ
+        async function loadUserVote() {
+            const user = auth.currentUser;
+            if (!user) return;
+            const email = user.email.toLowerCase().trim();
+
+            try {
+                const voteRef = db.collection('votes').doc(email);
+                const voteSnap = await voteRef.get();
+
+                if (voteSnap.exists) {
+                    const votedCandidate = voteSnap.data().candidate;
+                    const radioInput = document.querySelector(`input[name="candidate"][value="${votedCandidate}"]`);
+                    if (radioInput) radioInput.checked = true;
+                    
+                    const timestamp = voteSnap.data().timestamp.toDate();
+                    document.getElementById('last-vote-status').innerText = `Lần bỏ phiếu cuối lúc: ${timestamp.toLocaleString('vi-VN')}`;
+
+                    // Hiển thị Banner phiếu bầu hiện tại
+                    document.getElementById('current-vote-banner').classList.remove('hidden');
+                    document.getElementById('current-voted-candidate').innerText = votedCandidate;
+                }
+            } catch (error) { console.error("Lỗi khi tải phiếu bầu cũ:", error); }
+        }
+
+        // Tải kết quả thống kê (Chỉ dành cho Admin)
+        async function loadAdminResults() {
+            const summaryContainer = document.getElementById('admin-summary-cards');
+            const tableBody = document.getElementById('admin-detailed-table');
+            
+            summaryContainer.innerHTML = '<p class="text-sm text-gray-500">Đang tải thống kê...</p>';
+            tableBody.innerHTML = '<tr><td colspan="3" class="px-4 py-3 text-center text-sm text-gray-500">Đang tải dữ liệu...</td></tr>';
+
+            try {
+                // Lấy tất cả phiếu bầu
+                const votesSnap = await db.collection('votes').orderBy('timestamp', 'desc').get();
+                
+                let voteCounts = {};
+                let tableHTML = '';
+
+                if (votesSnap.empty) {
+                    summaryContainer.innerHTML = '<p class="text-sm text-gray-500 col-span-2">Chưa có ai bỏ phiếu.</p>';
+                    tableBody.innerHTML = '<tr><td colspan="3" class="px-4 py-3 text-center text-sm text-gray-500">Chưa có dữ liệu</td></tr>';
+                    return;
+                }
+
+                // Duyệt qua từng phiếu bầu
+                votesSnap.forEach(doc => {
+                    const data = doc.data();
+                    const email = doc.id;
+                    const candidate = data.candidate;
+                    const timeStr = data.timestamp ? data.timestamp.toDate().toLocaleString('vi-VN') : 'N/A';
+
+                    // Đếm số phiếu
+                    voteCounts[candidate] = (voteCounts[candidate] || 0) + 1;
+
+                    // Thêm dòng vào bảng
+                    tableHTML += `<tr class="hover:bg-gray-50"><td class="px-4 py-3 font-medium text-gray-900">${email}</td><td class="px-4 py-3 text-purple-700 font-semibold">${candidate}</td><td class="px-4 py-3 text-xs">${timeStr}</td></tr>`;
+                });
+
+                // Render Thẻ thống kê
+                let summaryHTML = '';
+                for (const [candidate, count] of Object.entries(voteCounts)) {
+                    summaryHTML += `
+                        <div class="bg-white border-l-4 border-purple-500 shadow-sm p-4 rounded-r-lg">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Ứng viên</p>
+                            <p class="text-lg font-bold text-gray-800 truncate">${candidate}</p>
+                            <p class="text-2xl font-black text-purple-600 mt-2">${count} <span class="text-sm font-normal text-gray-500">phiếu</span></p>
+                        </div>
+                    `;
+                }
+
+                summaryContainer.innerHTML = summaryHTML;
+                tableBody.innerHTML = tableHTML;
+
+            } catch (error) {
+                console.error("Lỗi tải kết quả:", error);
+                summaryContainer.innerHTML = '<p class="text-sm text-red-500 col-span-2">Lỗi tải dữ liệu. Hãy kiểm tra Security Rules.</p>';
+            }
+        }
+
+        // Thêm ứng viên mới (Chỉ có ở trang Admin)
+        async function addCandidate() {
+            const name = document.getElementById('candidate-name').value.trim();
+            const bio = document.getElementById('candidate-bio').value.trim();
+
+            if (!name || !bio) return alert("Vui lòng nhập đầy đủ Tên và Thành tích!");
+
+            try {
+                await db.collection('candidates').add({
+                    name: name,
+                    bio: bio,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert("Thêm ứng viên thành công!");
+                document.getElementById('candidate-name').value = '';
+                document.getElementById('candidate-bio').value = '';
+            } catch (error) {
+                alert("Lỗi khi thêm ứng viên: " + error.message);
+            }
+        }
 
         // Xử lý Gửi Phiếu
         async function submitVote() {
             const user = auth.currentUser;
             if (!user) return;
+            const email = user.email.toLowerCase().trim();
 
             const selected = document.querySelector('input[name="candidate"]:checked');
             if (!selected) return alert("Vui lòng chọn 1 ứng viên trước khi gửi!");
 
             const candidateName = selected.value;
-
+            
+            const isConfirmed = confirm(`Bạn có chắc chắn muốn bỏ phiếu cho "${candidateName}"?\n\nPhiếu bầu của bạn có thể được thay đổi cho đến hạn chót.`);
+            if (!isConfirmed) return;
+            
             try {
-                // Ghi vào database với ID chính là email (Đảm bảo mỗi người 1 phiếu)
-                await db.collection('votes').doc(user.email).set({
+                // Dùng .set() sẽ tạo mới hoặc ghi đè, cho phép người dùng thay đổi phiếu bầu
+                await db.collection('votes').doc(email).set({
                     candidate: candidateName,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                alert("Bạn đã bỏ phiếu thành công! Kết quả đã được niêm phong.");
-                
-                // Thay đổi giao diện sau khi bầu xong
-                document.getElementById('vote-form').innerHTML = `
-                    <div class="text-center p-6 bg-green-50 rounded-lg border border-green-200">
-                        <svg class="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <h3 class="text-lg font-bold text-green-800">Hoàn tất bầu cử</h3>
-                        <p class="text-sm text-green-600 mt-2">Phiếu bầu của bạn đã được hệ thống ghi nhận và bảo mật.</p>
-                    </div>`;
+                alert("Thành công! Phiếu bầu của bạn đã được ghi nhận. Bạn có thể thay đổi lựa chọn của mình cho đến hạn chót.");
+
+                // Cập nhật lại thời gian phiếu bầu cuối
+                document.getElementById('last-vote-status').innerText = `Lần bỏ phiếu cuối lúc: ${new Date().toLocaleString('vi-VN')}`;
+
+                // Cập nhật lại Banner cho user thấy ngay lập tức
+                document.getElementById('current-vote-banner').classList.remove('hidden');
+                document.getElementById('current-voted-candidate').innerText = candidateName;
+
             } catch (error) {
+                console.error("Lỗi bỏ phiếu chi tiết:", error);
                 if (error.code === 'permission-denied') {
-                    alert("Giao dịch thất bại! Có thể bạn ĐÃ BẦU RỒI hoặc ĐÃ HẾT HẠN bầu cử (sau 16h ngày 27/06/2026).");
+                    alert("Bỏ phiếu thất bại! Đã hết hạn bầu cử (sau 16h00 ngày 27/06/2026).");
                 } else {
                     alert("Lỗi hệ thống: " + error.message);
                 }
