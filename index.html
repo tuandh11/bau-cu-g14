@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bầu cử Chủ tịch CLB G14</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <style>
+        body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #f26d21 0%, #d85c18 100%); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl">
+        <div class="text-center">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">CLB G14</h1>
+            <p class="text-sm text-gray-500">Hệ thống Bầu cử Chủ tịch Nhiệm kỳ mới</p>
+            <p class="text-xs text-red-500 font-semibold mt-1">Hạn chót: 16h00 ngày 27/06/2026</p>
+        </div>
+
+        <div id="login-section" class="flex flex-col items-center">
+            <p class="text-gray-600 mb-6 text-center">Vui lòng đăng nhập bằng Email đã đăng ký với Ban Tổ Chức để thực hiện quyền bầu cử.</p>
+            <button onclick="loginWithGoogle()" class="flex items-center justify-center w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-white text-gray-700 hover:bg-gray-50 transition">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5 mr-3" alt="Google">
+                <span>Đăng nhập bằng Gmail</span>
+            </button>
+        </div>
+
+        <div id="voting-section" class="hidden space-y-4">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <p class="text-sm text-blue-800">Xin chào, <span id="user-email" class="font-bold"></span></p>
+            </div>
+            
+            <form id="vote-form" class="space-y-4">
+                <h3 class="font-semibold text-gray-700">Danh sách Ứng viên:</h3>
+                
+                <label class="flex items-center p-4 border rounded-xl cursor-pointer hover:border-[#f26d21] hover:bg-orange-50 transition">
+                    <input type="radio" name="candidate" value="Ứng viên A" class="w-5 h-5 text-[#f26d21] border-gray-300 focus:ring-[#f26d21]">
+                    <span class="ml-3 text-gray-800 font-medium">Nguyễn Văn A (Ứng viên 1)</span>
+                </label>
+
+                <label class="flex items-center p-4 border rounded-xl cursor-pointer hover:border-[#f26d21] hover:bg-orange-50 transition">
+                    <input type="radio" name="candidate" value="Ứng viên B" class="w-5 h-5 text-[#f26d21] border-gray-300 focus:ring-[#f26d21]">
+                    <span class="ml-3 text-gray-800 font-medium">Trần Thị B (Ứng viên 2)</span>
+                </label>
+
+                <button type="button" onclick="submitVote()" class="w-full py-3 mt-4 text-white font-bold rounded-lg shadow-lg gradient-bg hover:opacity-90 transition">
+                    Bỏ Phiếu Kín
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- THAY BẰNG CONFIG CỦA BẠN Ở BƯỚC 5 ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBJTk69thUMCE3HrQMH0MxhVhYC6SInT-M",
+            authDomain: "baucu-g14.firebaseapp.com",
+            projectId: "baucu-g14",
+            storageBucket: "baucu-g14.firebasestorage.app",
+            messagingSenderId: "52434051412",
+            appId: "1:52434051412:web:181a2c4c28c2fe7004a8c1"
+        };
+        // -----------------------------------------
+
+        // Khởi tạo Firebase
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Xử lý Đăng nhập
+        function loginWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(err => alert("Lỗi đăng nhập: " + err.message));
+        }
+
+        // Theo dõi trạng thái đăng nhập
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const email = user.email;
+                
+                // Kiểm tra danh sách trắng
+                const docRef = db.collection('allowed_voters').doc(email);
+                const docSnap = await docRef.get();
+
+                if (docSnap.exists) {
+                    // Nếu hợp lệ, hiển thị form
+                    document.getElementById('login-section').classList.add('hidden');
+                    document.getElementById('voting-section').classList.remove('hidden');
+                    document.getElementById('user-email').innerText = email;
+                } else {
+                    // Nếu không hợp lệ
+                    alert(`Tài khoản ${email} không có trong danh sách cử tri. Vui lòng liên hệ Admin.`);
+                    auth.signOut();
+                }
+            } else {
+                document.getElementById('login-section').classList.remove('hidden');
+                document.getElementById('voting-section').classList.add('hidden');
+            }
+        });
+
+        // Xử lý Gửi Phiếu
+        async function submitVote() {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const selected = document.querySelector('input[name="candidate"]:checked');
+            if (!selected) return alert("Vui lòng chọn 1 ứng viên trước khi gửi!");
+
+            const candidateName = selected.value;
+
+            try {
+                // Ghi vào database với ID chính là email (Đảm bảo mỗi người 1 phiếu)
+                await db.collection('votes').doc(user.email).set({
+                    candidate: candidateName,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                alert("Bạn đã bỏ phiếu thành công! Kết quả đã được niêm phong.");
+                
+                // Thay đổi giao diện sau khi bầu xong
+                document.getElementById('vote-form').innerHTML = `
+                    <div class="text-center p-6 bg-green-50 rounded-lg border border-green-200">
+                        <svg class="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <h3 class="text-lg font-bold text-green-800">Hoàn tất bầu cử</h3>
+                        <p class="text-sm text-green-600 mt-2">Phiếu bầu của bạn đã được hệ thống ghi nhận và bảo mật.</p>
+                    </div>`;
+            } catch (error) {
+                if (error.code === 'permission-denied') {
+                    alert("Giao dịch thất bại! Có thể bạn ĐÃ BẦU RỒI hoặc ĐÃ HẾT HẠN bầu cử (sau 16h ngày 27/06/2026).");
+                } else {
+                    alert("Lỗi hệ thống: " + error.message);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
